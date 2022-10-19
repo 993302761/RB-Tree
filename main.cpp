@@ -71,11 +71,20 @@ private:
         show(n->right);
     }
 
-    void check(node *p) {
-        if (p== nullptr){
+    void check(node *i) {
+
+        if (i== nullptr){
             return;
         }
 
+        if (i==root){
+            if (i->color==false){
+                i->color=true;
+            }
+            return;
+        }
+
+        node *p=i->parent;
         if(p->color== false){
             node *grandFa=p->parent;
             node *uncle= nullptr;
@@ -96,14 +105,106 @@ private:
                 grandFa->color= false;
                 check(grandFa);
             } else{
-                //如果父亲是红色，叔叔是黑色，且当前结点在父亲的父亲方向子树
-                if ()
+                //如果父亲是红色，叔叔节点不存在或为黑节点，并且插入节点的父亲节点是祖父节点的左子节点
+                if ((uncle== nullptr||uncle->color== true)&&grandFa->left==p){
+                    if (p->left==i){
+                        //插入节点是其父节点的左子节点
+                        p->color= true;
+                        grandFa->color=false;
+                        p=RR(grandFa);
+                        check(p);
+                    } else {
+                        //插入节点是其父节点的右子节点
+                        LL(p);
+                        i->color=true;
+                        grandFa->color=false;
+                        i=RR(grandFa);
+                        check(i);
+                    }
+                } else if ((uncle== nullptr||uncle->color== true)&&grandFa->right==p){
+                    //叔叔节点不存在或为黑节点，并且插入节点的父亲节点是祖父节点的右子节点
+                    if (p->right==i){
+                        //插入节点是其父节点的右子节点
+                        p->color= true;
+                        grandFa->color=false;
+                        p=LL(grandFa);
+                        check(p);
+                    } else{
+                        //插入节点是其父节点的右子节点
+                        RR(p);
+                        i->color=true;
+                        grandFa->color=false;
+                        i=LL(grandFa);
+                        check(i);
+                    }
+                }
             }
         }
 
 
     }
 
+
+
+    //左旋
+    node *LL(node *p){
+        node *right=p->right;
+
+        //   让 right 的左子树 成为 p 的右子树
+        p->right= right->left;
+        if (right->left!= nullptr){
+            right->left->parent=p;
+        }
+
+        // 让 p 成为 right 的左子树
+        if (p==root){
+            root=right;
+            right->parent= nullptr;
+        } else{
+            if (p->parent->left==p){
+                p->parent->left=right;
+            } else{
+                p->parent->right=right;
+            }
+            right->parent=p->parent;
+        }
+
+        right->left=p;
+        p->parent=right;
+
+
+        return right;
+    }
+
+    //右旋
+    node *RR(node *p){
+        node *left=p->left;
+
+        //  让 left 的右子树 成为 p 的左子树
+        p->left=left->right;
+        if (left->right!= nullptr){
+            left->right->parent=p;
+        }
+
+        //        让 p 成为 left 的右子树
+        if (p== root){
+            root=left;
+            left->parent= nullptr;
+        } else{
+            if (p->parent->left==p){
+                p->parent->left=left;
+            } else{
+                p->parent->right=left;
+            }
+            left->parent=p->parent;
+        }
+
+        left->right=p;
+        p->parent=left;
+
+
+        return left;
+    }
 
 
 
@@ -135,6 +236,129 @@ public:
     }
 
 
+    bool deleteNode(int data){
+        node *p=root;
+        while (p!= nullptr){
+            if (p->data<data){
+                p=p->left;
+            } else if (p->data>data){
+                p=p->right;
+            } else{
+                break;
+            }
+        }
+        if (p== nullptr){
+            cout<<"未找到"<<endl;
+            return false;
+        }
+
+        node *parent=p->parent;
+
+        //被删节点无子节点，且被删结点为红色
+        if (p->color== false&&p->left== nullptr&&p->right== nullptr){
+            if (parent->left==p){
+                parent->left= nullptr;
+            } else{
+                parent->right= nullptr;
+            }
+            delete p;
+            return true;
+        }
+
+        //被删结点有两个子结点，且被删结点为黑色或红色
+        if (p->left!= nullptr&&p->right!= nullptr){
+            node *s=p->left;
+            while (s->right!= nullptr){
+                s=s->right;
+            }
+            int i=s->data;
+            deleteNode(s->data);
+            p->data=i;
+            return true;
+        }
+
+        if (p->color== true){
+            if (p->left== nullptr&&p->right== nullptr){
+                if (parent->left== p){
+
+                    parent->left= nullptr;
+                    delete p;
+                    if (parent->right== nullptr){
+                        cout<<"错误"<<endl;
+                        return false;
+                    }
+
+                    node *brother=parent->right;
+
+                    //兄弟为黑色
+                    if (brother->color== true){
+                        if (brother->right!= nullptr&&brother->right->color== false){
+                            //兄弟节点相同方向有一个红色子节点
+                            brother->color=parent->color;
+                            parent=LL(parent);
+                            parent->left->color= true;
+                            parent->right->color= true;
+
+                        } else if (brother->left!= nullptr&&brother->left->color== false){
+                            //兄弟节点不同方向有一个红色子节点
+                            brother=RR(brother);
+                            brother->color=parent->color;
+                            parent=LL(parent);
+                            parent->left->color= true;
+                            parent->right->color= true;
+                        } else{
+                            //兄弟节点无红色子节点
+
+                            if (parent->color== false){
+                                parent->color=true;
+                                brother->color=false;
+                            } else{
+
+                            }
+                        }
+                    } else{
+                        //兄弟为红色时
+                        brother->color= true;
+                        parent->color=false;
+                        LL(parent);
+                    }
+
+                } else{
+                    parent->right= nullptr;
+                    delete p;
+
+                    if (parent->left== nullptr){
+                        cout<<"错误"<<endl;
+                        return false;
+                    }
+
+                    node *brother=parent->left;
+
+                }
+            } else {
+                if (p->left!= nullptr){
+                    if (parent->left==p){
+                        parent->left=p->left;
+                    } else{
+                        parent->right=p->left;
+                    }
+                    p->left->parent=parent;
+                    p->left->color=true;
+                } else{
+                    if (parent->left==p){
+                        parent->left=p->right;
+                    } else{
+                        parent->right=p->right;
+                    }
+                    p->right->parent=parent;
+                    p->right->color=true;
+                }
+                delete p;
+                return true;
+            }
+        }
+
+    }
 
 
     //遍历
@@ -170,7 +394,7 @@ public:
                     } else{
                         head->left=s;
                         s->parent=head;
-
+                        check(s);
                         return true;
                     }
                 } else{
@@ -180,10 +404,7 @@ public:
                     } else{
                         head->right=s;
                         s->parent=head;
-                        if (head->bf==1||head->bf==-1)
-                        {
-                            addBF(head);
-                        }
+                        check(s);
                         return true;
                     }
                 }
@@ -195,5 +416,14 @@ public:
 };
 
 int main() {
-    return 0;
+    RB_Tree<int> s;
+    s.insert(6);
+    s.insert(4);
+    s.insert(8);
+    s.insert(2);
+    s.insert(5);
+    s.insert(1);
+    s.insert(7);
+    s.insert(0);
+    s.showTree();
 }
